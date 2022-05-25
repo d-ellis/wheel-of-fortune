@@ -1,0 +1,316 @@
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wheel of Fortune!</title>
+  <style>
+    body, html {
+      padding: 0;
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    #divisor-options {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      margin-top: 1em;
+    }
+    #divisor-options div {
+      margin-right: 1vw;
+    }
+    #divisor-options div * {
+      margin-right: 2px;
+    }
+    .option-container {
+      display: flex;
+      flex-direction: row;
+      max-height: 2em;
+      align-items: center;
+    }
+    .option-container p {
+      margin-right: 10px;
+    }
+    #content {
+      z-index: 0;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+    #settings {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      min-width: 7vw;
+      min-height: 4vh;
+    }
+    #options-modal {
+      z-index: 20;
+      border-radius: 25px;
+      justify-content: center;
+      border: 1px solid black;
+      max-width: 80%;
+      padding: 1em;
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      background-color: white;
+      display: none;
+    }
+    #options-modal #done {
+      position: absolute;
+      top: 30px;
+      right: 30px;
+    }
+    #blur-page {
+      width: 100%;
+      height: 100%;
+      backdrop-filter: blur(6px);
+      position: absolute;
+      z-index: 10;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div id=blur-page></div>
+  <div id=content>
+    <canvas width="600" height="600" id='wheeloffortune'></canvas>
+    <button id=settings onclick='openModal()'>Settings</button>
+  </div>
+  <div id=options-modal>
+    <button id=done onclick='closeModal()'>Done</button>
+    <h2>Wheel Options</h2>
+    <div>
+      <div class='option-container'>
+        <p>Text Color</p>
+        <input type="color" name="" id="textColor" value="#000000">
+        </div>
+      <div class='option-container'>
+        <p>Number of divisions</p>
+        <input type="number" name="" id="divisionCount">
+      </div>
+        <div id='divisor-options'>
+      </div>
+    </div>
+  </div>
+  <script>
+const canvas = document.querySelector('#wheeloffortune')
+const optionsCounter = document.querySelector('#divisionCount')
+const optionsBox = document.querySelector('#divisor-options')
+const ctx = canvas.getContext('2d')
+let aC
+const width = canvas.height < canvas.width ? canvas.height : canvas.width
+const height = width
+let degrees = 0
+const radius = width/2
+let divs = 6
+let rS = 0
+const rF = 0.005
+let currentRotation = 0
+let gesture = false
+ctx.translate(width/2, height/2)
+let cRTV = 0
+let hsTickValue = 0
+let names = []
+let modal = false
+const randomNames = [
+  { value: 'buy it', color: '#6C3483'},
+  { value: 'use it', color: '#F9E79F'},
+  { value: 'make it', color: '#E6B0AA'},
+  { value: 'change it', color: '#EDBB99'},
+  { value: 'mail it', color: '#A3E4D7'},
+  { value: 'upgrade it', color: '#D1F2EB'},
+  { value: 'charge it', color: '#FAE5D3'},
+  { value: 'point it', color: '#AED6F1'},
+  { value: 'zoom it', color: '#E5E7E9'},
+  { value: 'press it', color: '#EAEDED'},
+  { value: 'snap it', color: '#BADA55'},
+  { value: 'work it', color: '#229954'},
+  { value: 'quick erase it', color: '#B03A2E'},
+]
+
+setInterval(() => {
+  ctx.clearRect(-(width/2), -(height/2), width, height)
+  dW(ctx, radius, divs, names)
+  currentRotation += rS
+  ctx.rotate(dToR(rS))
+  rS = (rS - rF <= 0) ? 0 : rS - rF
+  if (Math.floor(currentRotation / (360/divs)) > hsTickValue && gesture) {
+    hsTickValue = Math.floor(currentRotation / (360/divs))
+
+    let dur = 2
+    let freq = 440
+    let vol = 20
+    
+    // https://ourcodeworld.com/articles/read/1627/how-to-easily-generate-a-beep-notification-sound-with-javascript
+    let oN = aC.createOscillator()
+    let gainNode = aC.createGain()
+    oN.connect(gainNode)
+    oN.frequency.value = freq
+    oN.type = "square"
+    gainNode.connect(aC.destination)
+    gainNode.gain.value = vol * 0.01
+    oN.start(aC.currentTime)
+    oN.stop(aC.currentTime + dur * 0.001)
+  }
+
+  ctx.save()
+  ctx.resetTransform()
+  ctx.beginPath()
+  ctx.moveTo(width, (height/2)-20)
+  ctx.lineTo(width, (height/2)+20)
+  ctx.lineTo(width-20, height/2)
+  ctx.fill()
+  ctx.restore()
+}, 60/1000)
+
+function dW (context, radius, divisions, names) {
+  ctx.save()
+
+  for (let i = 0; i < divisions; i++) {
+    if (!names[i]) {
+      continue
+    }
+
+    ctx.beginPath()
+    ctx.moveTo(0, 0)
+    ctx.fillStyle = names[i].color
+    ctx.lineTo(radius, 0)
+    ctx.arc(0, 0, radius, 0, (2 * Math.PI)/divisions)
+    ctx.lineTo(0, 0)
+    ctx.fill()
+    ctx.rotate(dToR((360/divisions)/2))
+    ctx.fillStyle = document.querySelector('#textColor').value
+    ctx.font = '16px serif'
+    ctx.fillText(names[i].value, 30, 6)
+    ctx.rotate(dToR((360/divisions)/2))
+  }
+  ctx.restore()
+}
+function dToR (degrees) {
+  return degrees * Math.PI / 180
+}
+function dSO () {
+  const elements = []
+  for (let i = 0; i < divs; i++) {
+    const container = document.createElement('div')
+    const tag = document.createElement('p')
+    const name = document.createElement('input')
+    const color = document.createElement('input')
+
+    container.id = `container-${i}`
+    tag.innerHTML = 'Name:'
+    name.type = 'text'
+    color.type = 'color'
+
+    name.className = 'name'
+    color.className = 'color'
+
+    if (!names[i]) {
+      names[i] = randomNames[Math.floor(Math.random() * randomNames.length)]
+    }
+
+    name.value = names[i].value
+    color.value = names[i].color
+
+    name.addEventListener('change', uWS)
+    color.addEventListener('change', uWS)
+
+    container.style.display = 'flex'
+    container.style.flexDirection = 'row'
+
+    container.appendChild(tag)
+    container.appendChild(name)
+    container.appendChild(color)
+
+    elements.push(container)
+  }
+
+  optionsBox.replaceChildren(...elements)
+}
+function uWS (e, previousValues) {
+  names = []
+
+  if (previousValues) {
+    names = previousValues 
+  }
+
+  for (let i = 0; i < divs; i++) {
+    const name = document.querySelector(`#container-${i} .name`)
+    const color = document.querySelector(`#container-${i} .color`)
+
+    if (previousValues) {
+      name.value = names[i].value
+      color.value = names[i].color
+      continue
+    }
+
+    names.push({
+      value: name.value || 'Not Provided!',
+      color: color.value || '#FFFFFF'
+    })
+  }
+
+  localStorage.setItem('colors', JSON.stringify(names))
+}
+function openModal () {
+  if (modal) {
+    closeModal()
+  }
+
+  modal = true
+  document.querySelector('#options-modal').style.display = 'block'
+  document.querySelector('#blur-page').style.display = 'block'
+}
+function closeModal () {
+  modal = false
+  document.querySelector('#options-modal').style.display = 'none'
+  document.querySelector('#blur-page').style.display = 'none'
+}
+
+canvas.addEventListener('click', () => {
+  rS = Math.floor(Math.random() * (8 - 3) + 3)
+  aC = new AudioContext()
+  gesture = true
+})
+
+optionsCounter.addEventListener('change', e => {
+  divs = e.target.value
+  localStorage.setItem('divisions', divs)
+  dSO()
+})
+
+window.addEventListener('load', () => {
+  let previousValues = localStorage.getItem('colors')
+
+  if (!previousValues) {
+    localStorage.setItem('colors', JSON.stringify([
+      { value: 'work it', color: '#3498DB' },
+      { value: 'make it', color: '#E74C3C' },
+      { value: 'faster', color: '#E67E22' },
+      { value: 'better', color: '#2ECC71' },
+      { value: 'stronger', color: '#9B59B6' },
+      { value: 'faster', color: '#F4D03F' },
+    ]))
+  }
+
+  names = JSON.parse(localStorage.getItem('colors'))
+
+  const prevDivisions = localStorage.getItem('divisions')
+  if (prevDivisions) {
+    divs = prevDivisions
+  } else {
+    localStorage.setItem('divisions', 6)
+  }
+
+  optionsCounter.value = divs
+
+  dSO()
+  uWS(undefined, names)
+})
+  </script>
+</body>
+</html>
