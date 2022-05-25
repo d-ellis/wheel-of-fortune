@@ -130,6 +130,11 @@ const randomNames = [
   { value: 'snap it', color: '#BADA55'},
   { value: 'work it', color: '#229954'},
   { value: 'quick erase it', color: '#B03A2E'},
+  { value: 'twist it', color: '#ffa500'},
+  { value: 'flick it', color: '#00ff00'},
+  { value: 'pull it', color: '#0000ff'},
+  { value: 'spin it', color: '#ff0000'},
+  { value: 'bop it', color: '#ffff00'},
 ]
 
 setInterval(() => {
@@ -144,7 +149,7 @@ setInterval(() => {
     let dur = 2
     let freq = 440
     let vol = 20
-    
+
     // https://ourcodeworld.com/articles/read/1627/how-to-easily-generate-a-beep-notification-sound-with-javascript
     let oN = aC.createOscillator()
     let gainNode = aC.createGain()
@@ -235,7 +240,7 @@ function uWS (e, previousValues) {
   names = []
 
   if (previousValues) {
-    names = previousValues 
+    names = previousValues
   }
 
   for (let i = 0; i < divs; i++) {
